@@ -9,11 +9,133 @@
 <section class="panel"><h2>Meus produtos</h2><div id="products" class="empty">Cadastre seu primeiro produto.</div></section></div>
 <section class="panel" style="margin-top:16px"><h2>Gerador de roteiro-modelo</h2><label>Escolha o produto</label><select id="pick"></select><button class="btn primary" id="generate">Gerar roteiro e legenda</button><button class="btn muted" id="plan">Adicionar à lista</button><div class="grid2" style="margin-top:12px"><div><label>Roteiro</label><div id="script" class="out">Seu roteiro aparecerá aqui.</div><button class="btn muted" id="copyScript">Copiar roteiro</button></div><div><label>Legenda</label><div id="caption" class="out">Sua legenda aparecerá aqui.</div><button class="btn muted" id="copyCaption">Copiar legenda</button></div></div></section>
 <section class="panel" style="margin-top:16px"><h2>Lista de conteúdos</h2><div id="planned" class="empty">Nenhum conteúdo planejado.</div></section>
-<p class="small">Para IA real, sincronização entre aparelhos e publicação automática, será necessário configurar um backend seguro e integrações oficiais autorizadas.</p></main>
+
+<section class="panel" style="margin-top:16px" id="videoPanel">
+<h2>Gerador de vídeos em lote</h2>
+<p class="small">Crie vídeos verticais em sequência com imagens autorizadas dos produtos, textos na tela e música que você tenha direito de usar. A exportação é WebM. A narração feminina é pré-visualizada no navegador, mas ainda não é incorporada ao arquivo: isso exige conectar um serviço de voz.</p>
+<label>Produtos para gerar</label>
+<div id="batchProducts" class="product"><span class="small">Cadastre produtos primeiro.</span></div>
+<div class="grid2">
+<div><label>Imagens dos produtos (selecione várias)</label><input id="videoImages" type="file" accept="image/*" multiple><p class="small">As imagens selecionadas serão usadas na sessão atual do navegador.</p></div>
+<div><label>Música de fundo (opcional)</label><input id="videoMusic" type="file" accept="audio/*"><p class="small">Use apenas áudio autorizado. A duração será limitada a 20 segundos por vídeo.</p></div>
+</div>
+<label>Texto curto para aparecer nos vídeos</label><input id="videoHook" maxlength="100" placeholder="Ex.: Uma ideia prática para o dia a dia">
+<div class="grid2">
+<button class="btn muted" id="voicePreview" type="button">Ouvir narração feminina</button>
+<button class="btn primary" id="makeBatch" type="button">Gerar vídeos selecionados</button>
+</div>
+<div id="videoStatus" class="out" style="margin-top:12px">Selecione os produtos e as imagens. Os vídeos serão gerados um por vez e baixados em formato WebM.</div>
+</section>
+
+<p class="small">A sincronização entre aparelhos, análise automática de links e narração incorporada exigem backend e serviços autorizados; não são simulados nesta versão.</p></main>
 <script>
 const KEY='affiliate_panel_v1';let d={products:[],scripts:0,planned:[]};try{d={...d,...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch(e){}const $=x=>document.getElementById(x);const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const cash=n=>Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});function save(){localStorage.setItem(KEY,JSON.stringify(d));render()}
 function render(){$('nprod').textContent=d.products.length;$('nscripts').textContent=d.scripts;$('nplanned').textContent=d.planned.length;$('products').className=d.products.length?'':'empty';$('products').innerHTML=d.products.length?d.products.map(p=>'<article class="product"><b>'+esc(p.name)+'</b> <span class="pill">'+Number(p.commission||0)+'% comissão</span><p class="small">'+cash(p.price)+' · comissão estimada '+cash(Number(p.price||0)*Number(p.commission||0)/100)+'</p><p>'+esc(p.audience||'Público não informado')+'</p>'+(p.link?'<a href="'+esc(p.link)+'" target="_blank" rel="noopener">Abrir link</a><br>':'')+'<button class="btn muted" onclick="choose(\''+p.id+'\')">Roteiro</button><button class="btn muted" onclick="editP(\''+p.id+'\')">Editar</button><button class="btn muted" onclick="delP(\''+p.id+'\')">Excluir</button></article>').join(''):'Cadastre seu primeiro produto.';let old=$('pick').value;$('pick').innerHTML=d.products.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join('')||'<option value="">Cadastre um produto primeiro</option>';if(d.products.some(p=>p.id===old))$('pick').value=old;$('planned').className=d.planned.length?'':'empty';$('planned').innerHTML=d.planned.length?d.planned.map((p,i)=>'<article class="product"><b>'+esc(p.name)+'</b> — '+esc(p.status)+'<p class="small">'+esc(p.date)+'</p><button class="btn muted" onclick="toggleP('+i+')">Mudar status</button><button class="btn muted" onclick="removeP('+i+')">Excluir</button></article>').join(''):'Nenhum conteúdo planejado.'}
 $('form').onsubmit=e=>{e.preventDefault();d.products.push({id:String(Date.now()),name:$('name').value.trim(),price:$('price').value,commission:$('commission').value,link:$('link').value.trim(),features:$('features').value.trim(),audience:$('audience').value.trim()});$('form').reset();save()};window.choose=id=>{$('pick').value=id;$('pick').scrollIntoView({behavior:'smooth',block:'center'})};window.delP=id=>{if(confirm('Excluir produto?')){d.products=d.products.filter(p=>p.id!==id);save()}};window.editP=id=>{let p=d.products.find(p=>p.id===id);if(!p)return;['name','price','commission','link','features','audience'].forEach(k=>$(k).value=p[k]||'');d.products=d.products.filter(p=>p.id!==id);save();window.scrollTo({top:0,behavior:'smooth'})};
 function gen(){let p=d.products.find(p=>p.id===$('pick').value);if(!p){alert('Cadastre um produto primeiro.');return false}let f=p.features||'[insira um benefício real e verificável]',a=p.audience||'quem procura esse tipo de produto';$('script').textContent='ROTEIRO — '+p.name+'\n\n0–3s | GANCHO\n“Você também procura uma solução para '+a+'?”\n\n3–8s | DEMONSTRAÇÃO\nMostre o produto de perto e como é usado. Destaque apenas informações confirmadas: '+f+'.\n\n8–15s | BENEFÍCIO\nExplique como o produto pode ajudar '+a+'. Não prometa resultados garantidos.\n\n15–20s | CHAMADA\n“Confira os detalhes e o preço no produto vinculado ao vídeo.”\n\nAntes de publicar: confira preço e disponibilidade, direitos de uso das imagens e identificação de conteúdo de afiliado.';$('caption').textContent='Conheça '+p.name+'.\n'+f+'\nConfira as informações atualizadas no produto vinculado. Posso receber comissão por compras qualificadas feitas pelo meu link de afiliada.\n\n#TikTokShop #Achadinhos #Afiliados';d.scripts++;save();return true}
 $('generate').onclick=gen;$('plan').onclick=()=>{let p=d.products.find(p=>p.id===$('pick').value);if(!p){alert('Cadastre um produto primeiro.');return}if(gen()){d.planned.unshift({name:p.name,status:'Revisar antes de publicar',date:new Date().toLocaleDateString('pt-BR')});save()}};$('copyScript').onclick=()=>navigator.clipboard.writeText($('script').textContent).then(()=>alert('Roteiro copiado.')).catch(()=>alert('Selecione o texto e copie.'));$('copyCaption').onclick=()=>navigator.clipboard.writeText($('caption').textContent).then(()=>alert('Legenda copiada.')).catch(()=>alert('Selecione o texto e copie.'));window.toggleP=i=>{d.planned[i].status=d.planned[i].status==='Marcado como publicado por você'?'Revisar antes de publicar':'Marcado como publicado por você';save()};window.removeP=i=>{d.planned.splice(i,1);save()};$('export').onclick=()=>{let rows=[['Produto','Preço','Comissão (%)','Link','Benefícios','Público'],...d.products.map(p=>[p.name,p.price,p.commission,p.link,p.features,p.audience])];let csv='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')).join('\r\n');let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='produtos-afiliados.csv';a.click();URL.revokeObjectURL(a.href)};$('clear').onclick=()=>{if(confirm('Apagar todos os produtos e conteúdos salvos neste navegador?')){d={products:[],scripts:0,planned:[]};save()}};render();
-</script></body></html>
+</script>
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const imagesInput=$('videoImages'), musicInput=$('videoMusic'), status=$('videoStatus');
+let selectedImages=[], musicBuffer=null, cancelled=false;
+function showBatch(){
+ const wrap=$('batchProducts');
+ if(!d.products.length){wrap.className='empty';wrap.textContent='Cadastre produtos primeiro.';return}
+ wrap.className='product';
+ wrap.innerHTML=d.products.map(p=>'<label style="font-weight:normal;margin:8px 0"><input type="checkbox" data-video-product="'+esc(p.id)+'" checked style="width:auto;margin-right:8px">'+esc(p.name)+' — '+cash(p.price)+'</label>').join('');
+}
+imagesInput.addEventListener('change',async()=>{
+ selectedImages=[];
+ for(const file of Array.from(imagesInput.files||[])){
+  if(!file.type.startsWith('image/')) continue;
+  selectedImages.push(await new Promise(resolve=>{const r=new FileReader();r.onload=()=>resolve({src:r.result,name:file.name});r.onerror=()=>resolve(null);r.readAsDataURL(file)}));
+ }
+ selectedImages=selectedImages.filter(Boolean);
+ status.textContent=selectedImages.length+' imagem(ns) carregada(s).';
+});
+musicInput.addEventListener('change',async()=>{
+ const file=musicInput.files&&musicInput.files[0];musicBuffer=null;
+ if(!file)return;
+ try{const ctx=new (window.AudioContext||window.webkitAudioContext)();musicBuffer=await ctx.decodeAudioData(await file.arrayBuffer());await ctx.close();status.textContent='Música carregada.'}
+ catch(e){status.textContent='Não foi possível ler esse áudio. Tente um MP3 ou WAV.'}
+});
+$('voicePreview').onclick=()=>{
+ const p=d.products.find(p=>p.id===document.querySelector('[data-video-product]:checked')?.dataset.videoProduct)||d.products[0];
+ if(!p){status.textContent='Cadastre ou selecione um produto primeiro.';return}
+ if(!('speechSynthesis'in window)){status.textContent='Este navegador não oferece síntese de voz.';return}
+ speechSynthesis.cancel();
+ const text='Conheça '+p.name+'. '+(p.features||'Confira os detalhes e veja se este produto combina com você.')+' Acesse o produto pelo link de afiliada.';
+ const u=new SpeechSynthesisUtterance(text);u.lang='pt-BR';u.rate=1;u.pitch=1;
+ const voices=speechSynthesis.getVoices();const female=voices.find(v=>/pt-BR/i.test(v.lang)&&/female|feminina|maria|francisca/i.test(v.name))||voices.find(v=>/pt-BR/i.test(v.lang));
+ if(female)u.voice=female;
+ u.onstart=()=>status.textContent='Reproduzindo a prévia da narração. A voz do navegador pode variar.';
+ u.onend=()=>status.textContent='Prévia concluída. Atenção: a narração ainda não é incorporada ao arquivo de vídeo.';
+ speechSynthesis.speak(u);
+};
+function rounded(ctx,x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill()}
+async function createVideo(p,index,total){
+ if(!selectedImages.length)throw Error('Selecione ao menos uma imagem.');
+ if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream)throw Error('Seu navegador não suporta exportação de vídeo. Tente uma versão atualizada do Chrome ou Edge.');
+ const canvas=document.createElement('canvas');canvas.width=720;canvas.height=1280;
+ const ctx=canvas.getContext('2d');
+ const stream=canvas.captureStream(30);
+ let audioCtx=null, source=null;
+ if(musicBuffer){
+  audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  const dest=audioCtx.createMediaStreamDestination();source=audioCtx.createBufferSource();source.buffer=musicBuffer;source.loop=true;
+  const gain=audioCtx.createGain();gain.gain.value=.16;source.connect(gain);gain.connect(dest);source.start();
+  dest.stream.getAudioTracks().forEach(t=>stream.addTrack(t));
+ }
+ const mime=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(t=>MediaRecorder.isTypeSupported(t))||'video/webm';
+ const recorder=new MediaRecorder(stream,{mimeType:mime});const chunks=[];
+ recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+ const done=new Promise((resolve,reject)=>{recorder.onstop=()=>resolve(new Blob(chunks,{type:mime}));recorder.onerror=()=>reject(Error('Falha ao gravar vídeo.'))});
+ recorder.start();
+ const imageList=selectedImages;
+ const hook=$('videoHook').value.trim();
+ const title=p.name;
+ const subtitle=p.features||'Confira os detalhes do produto';
+ const drawText=(text,x,y,maxWidth,font,color)=>{ctx.font=font;ctx.fillStyle=color;ctx.textAlign='center';const words=String(text).split(/\s+/);let line='',lines=[],lineHeight=48;for(const word of words){const test=line?line+' '+word:word;if(ctx.measureText(test).width>maxWidth&&line){lines.push(line);line=word}else line=test}if(line)lines.push(line);lines.slice(0,4).forEach((l,i)=>ctx.fillText(l,x,y+i*lineHeight));return lines.length*lineHeight};
+ const start=performance.now();
+ while(performance.now()-start<20000){
+  const elapsed=(performance.now()-start)/1000, scene=Math.floor(elapsed/5)%Math.max(2,imageList.length+1);
+  ctx.fillStyle='#111827';ctx.fillRect(0,0,720,1280);
+  const grad=ctx.createLinearGradient(0,0,720,1280);grad.addColorStop(0,'#fe2c55');grad.addColorStop(1,'#161b2a');ctx.fillStyle=grad;ctx.fillRect(0,0,720,1280);
+  if(scene<imageList.length){
+   const im=await new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=reject;i.src=imageList[scene].src});
+   const scale=Math.min(600/im.width,680/im.height),w=im.width*scale,h=im.height*scale;
+   ctx.save();rounded(ctx,60,150,600,720,28);ctx.clip();ctx.drawImage(im,360-w/2,510-h/2,w,h);ctx.restore();
+  }else{
+   ctx.fillStyle='rgba(255,255,255,.12)';rounded(ctx,90,250,540,540,36);
+   drawText('DESCUBRA',360,450,480,'bold 48px Arial','#fff');
+  }
+  drawText(title,360,940,620,'bold 44px Arial','#fff');
+  drawText(hook||'Uma dica para conhecer este produto',360,1010,600,'bold 29px Arial','#fff');
+  drawText(subtitle,360,1080,600,'24px Arial','#fff');
+  drawText('Confira os detalhes no link do produto',360,1190,620,'bold 25px Arial','#fff');
+  await new Promise(r=>setTimeout(r,150));
+ }
+ recorder.stop();const blob=await done;stream.getTracks().forEach(t=>t.stop());if(audioCtx)await audioCtx.close();
+ return blob;
+}
+$('makeBatch').onclick=async()=>{
+ const products=Array.from(document.querySelectorAll('[data-video-product]:checked')).map(el=>d.products.find(p=>p.id===el.dataset.videoProduct)).filter(Boolean);
+ if(!products.length){status.textContent='Marque ao menos um produto.';return}
+ if(!selectedImages.length){status.textContent='Selecione fotos ou imagens autorizadas dos produtos.';return}
+ cancelled=false;$('makeBatch').disabled=true;
+ try{
+  for(let i=0;i<products.length;i++){
+   const p=products[i];status.textContent='Gerando vídeo '+(i+1)+' de '+products.length+': '+p.name+'. Não feche esta página.';
+   const blob=await createVideo(p,i,products.length);
+   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=('tiktok-'+p.name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')+'.webm');document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),60000);
+  }
+  status.textContent='Concluído: '+products.length+' vídeo(s) gerado(s). A exportação inclui imagens, textos e música opcional. A narração é apenas uma prévia no navegador e ainda não está dentro dos vídeos.';
+ }catch(e){status.textContent='Não foi possível concluir: '+e.message}
+ finally{$('makeBatch').disabled=false}
+};
+showBatch();
+})();
+</script>
+</body></html>
