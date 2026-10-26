@@ -12,7 +12,7 @@
 
 <section class="panel" style="margin-top:16px" id="videoPanel">
 <h2>Gerador de vídeos em lote</h2>
-<p class="small">Crie vídeos verticais em sequência com imagens autorizadas dos produtos, textos na tela e música que você tenha direito de usar. A exportação é WebM. A narração feminina é pré-visualizada no navegador, mas ainda não é incorporada ao arquivo: isso exige conectar um serviço de voz.</p>
+<p class="small">Crie vídeos verticais em sequência com imagens autorizadas dos produtos, textos na tela e música que você tenha direito de usar. A exportação é WebM. Você pode escolher voz feminina ou masculina para ouvir uma prévia; a narração ainda não é incorporada ao arquivo de vídeo.</p>
 <label>Produtos para gerar</label>
 <div id="batchProducts" class="product"><span class="small">Cadastre produtos primeiro.</span></div>
 <div class="grid2">
@@ -21,8 +21,8 @@
 </div>
 <label>Texto curto para aparecer nos vídeos</label><input id="videoHook" maxlength="100" placeholder="Ex.: Uma ideia prática para o dia a dia">
 <div class="grid2">
-<button class="btn muted" id="voicePreview" type="button">Ouvir narração feminina</button>
-<button class="btn primary" id="makeBatch" type="button">Gerar vídeos selecionados</button>
+<div><label for="voiceGender">Voz da narração (prévia)</label><select id="voiceGender"><option value="female">Feminina</option><option value="male">Masculina</option></select><button class="btn muted" id="voicePreview" type="button">Ouvir prévia da voz</button></div>
+<div style="align-self:end"><button class="btn primary" id="makeBatch" type="button">Gerar vídeos selecionados</button></div>
 </div>
 <div id="videoStatus" class="out" style="margin-top:12px">Selecione os produtos e as imagens. Os vídeos serão gerados um por vez e baixados em formato WebM.</div>
 </section>
@@ -67,11 +67,15 @@ $('voicePreview').onclick=()=>{
  if(!('speechSynthesis'in window)){status.textContent='Este navegador não oferece síntese de voz.';return}
  speechSynthesis.cancel();
  const text='Conheça '+p.name+'. '+(p.features||'Confira os detalhes e veja se este produto combina com você.')+' Acesse o produto pelo link de afiliada.';
- const u=new SpeechSynthesisUtterance(text);u.lang='pt-BR';u.rate=1;u.pitch=1;
- const voices=speechSynthesis.getVoices();const female=voices.find(v=>/pt-BR/i.test(v.lang)&&/female|feminina|maria|francisca/i.test(v.name))||voices.find(v=>/pt-BR/i.test(v.lang));
- if(female)u.voice=female;
- u.onstart=()=>status.textContent='Reproduzindo a prévia da narração. A voz do navegador pode variar.';
- u.onend=()=>status.textContent='Prévia concluída. Atenção: a narração ainda não é incorporada ao arquivo de vídeo.';
+ const gender=$('voiceGender').value;
+ const u=new SpeechSynthesisUtterance(text);u.lang='pt-BR';u.rate=1;u.pitch=gender==='female'?1.12:0.82;
+ const allVoices=speechSynthesis.getVoices();
+ const voices=allVoices.filter(v=>/^pt[-_]BR/i.test(v.lang));
+ const pattern=gender==='female'?/female|feminina|woman|mulher|maria|francisca|luciana|camila|heloisa|helena|fernanda/i:/male|masculina|man|homem|daniel|ricardo|antonio|jorge|fabio|felipe/i;
+ const chosen=voices.find(v=>pattern.test(v.name))||voices[0]||allVoices.find(v=>pattern.test(v.name));
+ if(chosen)u.voice=chosen;
+ u.onstart=()=>status.textContent='Reproduzindo a prévia da voz '+(gender==='female'?'feminina':'masculina')+'. A disponibilidade depende das vozes instaladas no navegador.';
+ u.onend=()=>status.textContent='Prévia concluída. A voz ainda não é incorporada ao arquivo de vídeo.';
  speechSynthesis.speak(u);
 };
 function rounded(ctx,x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill()}
